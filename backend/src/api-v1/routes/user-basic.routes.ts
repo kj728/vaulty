@@ -1,8 +1,9 @@
 
 import express from 'express';
-import { registerUser } from '../controllers/user-basic.controllers';
+import { loginUser, registerUser } from '../controllers/user-basic.controllers';
 
 export const authRouter = express.Router()
 
 
-authRouter.post('/register',registerUser)
+authRouter.post('/register', registerUser)
+authRouter.post('/login', loginUser)
