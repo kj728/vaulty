@@ -71,3 +71,59 @@ export const getUsers = async (request: Request, response: Response): Promise<vo
         response.status(500).json({ message: `An error occured: ` + error.sqlMessage })
     }
 }
+
+
+export const updateUser = async (request: Request<{ id: string }>, response: Response): Promise<void> => {
+    const { id: userId } = request.params
+    const { username, email, phoneNumber, password, gender, dob, profilePic } = request.body
+    const connection = await pool.getConnection()
+
+    try {
+
+        //check if the user exists using the userId provided in the params
+        const [rows1, fields1] = await connection.query(
+            `SELECT * FROM userBasicInfo WHERE id='${userId}' AND isDeleted=0;`
+        )
+        connection.release()
+        const User = rows1 as Array<Users>
+        //check if the user exists
+        if (User.length === 0) {
+            response.status(401).json({ message: `Oops! User does not exist.` })
+            return
+        }
+        //if the user exists, update the user details in the database
+        const [rows2, fields2] = await connection.query(
+            `UPDATE userBasicInfo SET 
+            username='${username}',
+            email='${email}',
+            phoneNumber='${phoneNumber}',
+            password='${password}',
+            WHERE id='${User[0].id}' AND isDeleted=0;
+         
+            UPDATE userDetails SET
+            gender='${gender}',
+            dob='${dob}',
+            profilePic='${profilePic}'
+            WHERE id='${User[0].id}';`
+        )
+
+        connection.release()
+        const updatedUser = rows2 as Array<Users>
+        //check if the user details were updated successfully
+        if (updatedUser.length === 0) {
+            response.status(401).json({ message: `Oops! User details not updated.` })
+            return
+        }
+        //if the user details were updated successfully, return the user details
+        response.status(200).json({
+            message: `User details updated successfully.`,
+            data: updatedUser[0]
+        })
+        
+    } catch (error: sqlError | any) {
+        console.error("Error updating user:", error)
+        response.status(500).json({ message: `An error occured: ` + error.sqlMessage })
+
+    }
+
+}
