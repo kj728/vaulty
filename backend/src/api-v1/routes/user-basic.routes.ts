@@ -1,7 +1,7 @@
 
 import express from 'express';
 import { addUserDetails, deactivateAccount, loginUser, reactivateAccount, registerUser } from '../controllers/user-basic.controllers';
-import { getUserByEmail } from '../controllers/user-details.controller';
+import { getUserByEmail, getUsers } from '../controllers/user-details.controller';
 
 export const authRouter = express.Router()
 
@@ -13,3 +13,4 @@ authRouter.put('/deactivate/:id', deactivateAccount)
 authRouter.patch('/reactivate/:id', reactivateAccount)
 
 authRouter.get('/get-by-email',getUserByEmail)
+authRouter.get('/get-all',getUsers)

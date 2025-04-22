@@ -47,3 +47,27 @@ export const getUserByEmail = async (request: Request, response: Response): Prom
         response.status(500).json({ message: `An error occured: ` + error.sqlMessage })
     }
 }
+
+export const getUsers = async (request: Request, response: Response): Promise<void> => {
+    const connection = await pool.getConnection()
+    try {
+        const [rows1, fields1] = await connection.query(
+            `SELECT * FROM userBasicInfo WHERE isDeleted=0;`
+        )
+        connection.release()
+        const Users = rows1 as Array<Users>
+        //check if the user exists
+        if (Users.length === 0) {
+            response.status(401).json({ message: `Oops! User does not exist.` })
+            return
+        }
+        //if the user exists, return the user details
+        response.status(200).json({
+            message: `Users found successfully.`,
+            data: Users
+        })
+    } catch (error: sqlError | any) {
+        console.error("Error registering user:", error)
+        response.status(500).json({ message: `An error occured: ` + error.sqlMessage })
+    }
+}
