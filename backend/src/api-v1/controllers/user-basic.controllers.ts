@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
-import { loginEmailSchema, loginUsernameSchema, registerSchema } from "../validators/user-basic.validators";
+import { loginEmailSchema, loginUsernameSchema, registerSchema, userDetailsSchema } from "../validators/user-basic.validators";
 import { v4 as uid } from 'uuid';
 import mysql from 'mysql2/promise';
 import { sqlConfig } from "../../config";
-import { Users } from "../models/user.model";
+import { UserDetails, Users } from "../models/user.model";
 import { error } from "console";
 import { sqlError } from "../models/user-basic.models";
 
@@ -48,6 +48,7 @@ export const registerUser = async (request: Request, response: Response): Promis
     )
     connection.release()
     const User = rows2 as Array<Users>
+
     response.status(201).json({
       message: `Congratulations ${User[0].username}! You have successfully been registered on the system.`,
 
@@ -59,12 +60,6 @@ export const registerUser = async (request: Request, response: Response): Promis
 
   }
 }
-
-export const getUser = async (request: Request, response: Response): Promise<void> => { }
-
-export const updateUser = async (request: Request, response: Response): Promise<void> => { }
-
-export const deleteUser = async (request: Request, response: Response): Promise<void> => { }
 
 export const loginUser = async (request: Request, response: Response): Promise<void> => {
   const { emailOrUsername, password } = request.body
@@ -87,6 +82,7 @@ export const loginUser = async (request: Request, response: Response): Promise<v
       const [rows, fields] = await connection.query(
         `SELECT * FROM userBasicInfo WHERE email='${emailOrUsername}' AND isDeleted=0;`
       )
+      connection.release()
       const User = rows as Array<Users>
 
       //check if the user exists
@@ -121,6 +117,7 @@ export const loginUser = async (request: Request, response: Response): Promise<v
       const [rows, fields] = await connection.query(
         `SELECT * FROM userBasicInfo WHERE username='${emailOrUsername}' AND isDeleted=0;`
       )
+      connection.release()
       const User = rows as Array<Users>
 
       //check if the user exists
@@ -147,3 +144,69 @@ export const loginUser = async (request: Request, response: Response): Promise<v
   }
 
 }
+
+
+export const addUserDetails = async (request: Request<{ id: string }>, response: Response): Promise<void> => {
+  const { id: userId } = request.params
+  const id = uid()
+  const { gender, dob, profilePic } = request.body
+  const connection = await pool.getConnection()
+  try {
+    //validate the data
+    const { error } = userDetailsSchema.validate(request.body)
+    if (error) {
+      console.error("Validation error:", error.details[0].message)
+      response.status(400).json({ message: error.details[0].message })
+      return
+    }
+
+    //check if the user exists using the userId provided in the params
+    const [rows1, fields1] = await connection.query(
+      `SELECT * FROM userBasicInfo WHERE id='${userId}' AND isDeleted=0;`
+    )
+    connection.release()
+    const User = rows1 as Array<Users>
+    //check if the user exists
+    if (User.length === 0) {
+      response.status(401).json({ message: `Oops! User does not exist.` })
+      return
+    }
+
+    //if the user exists, add the user details to the database
+    const [rows2, fields2] = await connection.query(
+      `INSERT INTO userPersonalInfo VALUES(
+        '${id}',
+        '${userId}',
+        '${gender}',
+        '${dob}',
+        '${profilePic}',
+        1,
+        DEFAULT
+      );`
+    )
+    connection.release()
+    const userDetails = rows2 as Array<UserDetails>
+
+    //check if the user details were added successfully
+    if (userDetails.length === 0) {
+      response.status(401).json({ error: `Oops! User details were not added successfully. Try again?` })
+      return
+    }
+    //if the user details were added successfully, return the user's details
+    response.status(200).json({
+      message: `Congratulations ${User[0].username}! Your details have been added successfully.`,
+    })
+
+
+  } catch (error: sqlError | any) {
+    console.error("Error registering user:", error)
+    response.status(500).json({ message: `An error occured: ` + error.sqlMessage })
+
+  }
+
+
+}
+
+export const deactivatAccount = async (request: Request, response: Response): Promise<void> => { }
+
+export const reactivateAccount = async (request: Request, response: Response): Promise<void> => { }
