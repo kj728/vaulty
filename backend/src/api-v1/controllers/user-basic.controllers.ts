@@ -248,4 +248,44 @@ export const deactivateAccount = async (request: Request<{ id: string }>, respon
   }
 }
 
-export const reactivateAccount = async (request: Request, response: Response): Promise<void> => { }
+export const reactivateAccount = async (request: Request<{ id: string }>, response: Response): Promise<void> => { 
+  const { id: userId } = request.params
+  const connection = await pool.getConnection()
+  try {
+    //check if the user exists using the userId provided in the params
+    const [rows1, fields1] = await connection.query(
+      `SELECT * FROM userBasicInfo WHERE id='${userId}' AND isDeleted=1;`
+    )
+    connection.release()
+    const User = rows1 as Array<Users>
+    //check if the user exists
+    if (User.length === 0) {
+      response.status(401).json({ message: `Oops! User does not exist.` })
+      return
+    }
+
+    //if the user exists, reactivate the account by setting isDeleted to 0
+    const [rows2, fields2] = await connection.query(
+      `UPDATE userBasicInfo SET isDeleted=0 WHERE id='${userId}';`
+    )
+    connection.release()
+    const reactivatedUser = rows2 as Array<Users>
+
+    //check if the account was reactivated successfully
+    if (reactivatedUser.length === 0) {
+      response.status(401).json({ error: `Oops! Account was not reactivated successfully. Try again?` })
+      return
+    }
+    //if the account was reactivated successfully, return a success message
+    response.status(200).json({
+      message: `Congratulations ${User[0].username}! Your account has been reactivated successfully.`,
+    })
+
+
+  } catch (error: sqlError | any) {
+    console.error("Error registering user:", error)
+    response.status(500).json({ error: `An error occured: ` + error.sqlMessage })
+
+  }
+
+}
