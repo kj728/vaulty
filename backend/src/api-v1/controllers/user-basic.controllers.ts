@@ -19,7 +19,7 @@ export const registerUser = async (request: Request, response: Response): Promis
 
     if (error) {
       console.error("Validation error:", error.details[0].message)
-      response.status(400).json({ message: error.details[0].message })
+      response.status(400).json({ error: error.details[0].message })
       return
     }
 
@@ -75,7 +75,7 @@ export const loginUser = async (request: Request, response: Response): Promise<v
       const { error } = loginEmailSchema.validate(request.body)
       if (error) {
         console.error("Validation error:", error.details[0].message)
-        response.status(400).json({ message: error.details[0].message })
+        response.status(400).json({ error: error.details[0].message })
         return
       }
       //get the user from the database
@@ -109,7 +109,7 @@ export const loginUser = async (request: Request, response: Response): Promise<v
       const { error } = loginUsernameSchema.validate(request.body)
       if (error) {
         console.error("Validation error:", error.details[0].message)
-        response.status(400).json({ message: error.details[0].message })
+        response.status(400).json({ error: error.details[0].message })
         return
       }
 
@@ -156,7 +156,7 @@ export const addUserDetails = async (request: Request<{ id: string }>, response:
     const { error } = userDetailsSchema.validate(request.body)
     if (error) {
       console.error("Validation error:", error.details[0].message)
-      response.status(400).json({ message: error.details[0].message })
+      response.status(400).json({ error: error.details[0].message })
       return
     }
 
@@ -168,7 +168,7 @@ export const addUserDetails = async (request: Request<{ id: string }>, response:
     const User = rows1 as Array<Users>
     //check if the user exists
     if (User.length === 0) {
-      response.status(401).json({ message: `Oops! User does not exist.` })
+      response.status(401).json({ error: `Oops! User does not exist.` })
       return
     }
 
@@ -207,6 +207,45 @@ export const addUserDetails = async (request: Request<{ id: string }>, response:
 
 }
 
-export const deactivatAccount = async (request: Request, response: Response): Promise<void> => { }
+export const deactivateAccount = async (request: Request<{ id: string }>, response: Response): Promise<void> => {
+  const { id: userId } = request.params
+  const connection = await pool.getConnection()
+  try {
+    //check if the user exists using the userId provided in the params
+    const [rows1, fields1] = await connection.query(
+      `SELECT * FROM userBasicInfo WHERE id='${userId}' AND isDeleted=0;`
+    )
+    connection.release()
+    const User = rows1 as Array<Users>
+    //check if the user exists
+    if (User.length === 0) {
+      response.status(401).json({ message: `Oops! User does not exist.` })
+      return
+    }
+
+    //if the user exists, deactivate the account by setting isDeleted to 1
+    const [rows2, fields2] = await connection.query(
+      `UPDATE userBasicInfo SET isDeleted=1 WHERE id='${userId}';`
+    )
+    connection.release()
+    const deactivatedUser = rows2 as Array<Users>
+
+    //check if the account was deactivated successfully
+    if (deactivatedUser.length === 0) {
+      response.status(401).json({ error: `Oops! Account was not deactivated successfully. Try again?` })
+      return
+    }
+    //if the account was deactivated successfully, return a success message
+    response.status(200).json({
+      message: `Your account has been deactivated successfully. It will be permanently deleted in 7 days.`,
+    })
+
+
+  } catch (error: sqlError | any) {
+    console.error("Error registering user:", error)
+    response.status(500).json({ error: `An error occured: ` + error.sqlMessage })
+
+  }
+}
 
 export const reactivateAccount = async (request: Request, response: Response): Promise<void> => { }
