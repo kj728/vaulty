@@ -22,7 +22,7 @@ export interface UsersBasicInfo {
     password:string,
     createdAt:string,
     isEmailVerified:string,
-    isDeleetd:string
+    isDeleted:string
 }
 
 export interface UsersPersonalInfo {

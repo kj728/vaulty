@@ -1,6 +1,6 @@
 import express,{json} from 'express'
 import dotenv from 'dotenv'
-import authRouter from './api-v1/routes/user-basic.routes'
+import { authRouter } from './api-v1/routes/user-basic.routes'
 
 dotenv.config()
 
